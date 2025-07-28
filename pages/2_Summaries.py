@@ -102,11 +102,27 @@ def quarter_order(row):
 
 
 
-def highlight_quarters(val):
-    if val == " ":
-        return "background-color: #ff9999; color: black;"
-    return ""
+# def highlight_quarters(val):
+#     if val == " ":
+#         return "background-color: #ff9999; color: black;"
+#     return ""
 
+
+def highlight_quarters(row):
+    style = {}
+    is_elective = "Electives" in row.get("Category", "")  # fallback if missing
+
+    color = "#fccccc" if is_elective else "#f8b0b0"  # light vs dark red
+
+    for q in ["Q1", "Q2", "Q3", "Q4"]:
+        if row[q] == " ":
+            style[q] = f"background-color: {color}; color: black;"
+        else:
+            style[q] = ""
+    return pd.Series(style)
+
+
+# Loop through valid years
 for year in [1, 2]:
     year_df = timeline_df[timeline_df["Year"] == year].copy()
     year_df["__sort__"] = year_df.apply(quarter_order, axis=1)
@@ -114,33 +130,71 @@ for year in [1, 2]:
 
     if not year_df.empty:
         st.markdown(f"### Year {year}")
-        view = year_df[["Course Name", "Q1", "Q2", "Q3", "Q4"]]
-        styled = view.style.map(highlight_quarters, subset=["Q1", "Q2", "Q3", "Q4"])
+        # Include Category for styling but don't display it
+        full_view = year_df[["Course Name", "Category", "Q1", "Q2", "Q3", "Q4"]]
+        visible_view = full_view.drop(columns="Category")
+
+        styled = visible_view.style.apply(
+            lambda row: highlight_quarters(full_view.loc[row.name]), axis=1
+        )
+
         st.dataframe(styled, use_container_width=True)
 
-        # Calculate ECs per quarter for this year
+
+        # Calculate ECs per quarter
         ec_totals = {"Q1": 0, "Q2": 0, "Q3": 0, "Q4": 0}
         for _, row in year_df.iterrows():
-            course_name = row["Course Name"]
             ec = row["ECs"]
             if pd.notna(row["Quarter"]):
                 quarters = [q.strip() for q in str(row["Quarter"]).split(",")]
-                ec_per_q = ec / len(quarters)  # evenly distribute ECs
+                ec_per_q = ec / len(quarters)
                 for q in quarters:
                     q_col = f"Q{q}"
                     if q_col in ec_totals:
                         ec_totals[q_col] += ec_per_q
 
-        # Display EC totals below each quarter
-        # Compute semester totals
         sem1_ecs = ec_totals["Q1"] + ec_totals["Q2"]
         sem2_ecs = ec_totals["Q3"] + ec_totals["Q4"]
 
-        # Create empty-left and right-aligned column layout
-        col_spacer, col_right = st.columns([3, 1])  # Adjust ratio as needed
-
+        col_spacer, col_right = st.columns([3, 1])
         with col_right:
             st.markdown(f"<div style='text-align:right;'><strong>Semester 1 ECs:</strong> {sem1_ecs}</div>", unsafe_allow_html=True)
             st.markdown(f"<div style='text-align:right;'><strong>Semester 2 ECs:</strong> {sem2_ecs}</div>", unsafe_allow_html=True)
 
+# Handle courses with no valid Year
+unassigned_df = timeline_df[pd.isna(timeline_df["Year"])].copy()
 
+if not unassigned_df.empty:
+    unassigned_df["__sort__"] = unassigned_df.apply(quarter_order, axis=1)
+    unassigned_df = unassigned_df.sort_values("__sort__").drop(columns="__sort__")
+
+    st.markdown("### 🕗 Unassigned Courses")
+    full_view = unassigned_df[["Course Name", "Category", "Q1", "Q2", "Q3", "Q4"]]
+    visible_view = full_view.drop(columns="Category")
+
+    styled = visible_view.style.apply(
+        lambda row: highlight_quarters(full_view.loc[row.name]), axis=1
+    )
+
+    st.dataframe(styled, use_container_width=True)
+
+
+    # Optional: EC summary here too
+    ec_totals = {"Q1": 0, "Q2": 0, "Q3": 0, "Q4": 0}
+    for _, row in unassigned_df.iterrows():
+        ec = row["ECs"]
+        if pd.notna(row["Quarter"]):
+            quarters = [q.strip() for q in str(row["Quarter"]).split(",")]
+            ec_per_q = ec / len(quarters)
+            for q in quarters:
+                q_col = f"Q{q}"
+                if q_col in ec_totals:
+                    ec_totals[q_col] += ec_per_q
+
+    sem1_ecs = ec_totals["Q1"] + ec_totals["Q2"]
+    sem2_ecs = ec_totals["Q3"] + ec_totals["Q4"]
+
+    col_spacer, col_right = st.columns([3, 1])
+    with col_right:
+        st.markdown(f"<div style='text-align:right;'><strong>Semester 1 ECs:</strong> {sem1_ecs}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align:right;'><strong>Semester 2 ECs:</strong> {sem2_ecs}</div>", unsafe_allow_html=True)
