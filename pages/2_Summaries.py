@@ -67,10 +67,13 @@ for row in summary_rows:
 summary_df = pd.DataFrame(summary_rows)
 
 def highlight_remaining(val):
-    if val <= 0:
-        return "background-color: #d4edda; color: black;"
+    if val < 0:
+        return "background-color: #cce5ff; color: black;"  # light blue
+    elif val == 0:
+        return "background-color: #d4edda; color: black;"  # green
     else:
-        return "background-color: #f8d7da; color: black;"
+        return "background-color: #f8d7da; color: black;"  # red
+
 
 styled_df = summary_df.style.map(highlight_remaining, subset=["Remaining ECs"])
 st.dataframe(styled_df, use_container_width=True)
@@ -91,13 +94,24 @@ for idx, row in timeline_df.iterrows():
             if col in timeline_df.columns:
                 timeline_df.at[idx, col] = " "
 
+def quarter_order(row):
+    if pd.isna(row["Quarter"]):
+        return 99  # put empty quarter courses at the end
+    quarters = [int(q.strip()) for q in str(row["Quarter"]).split(",") if q.strip().isdigit()]
+    return min(quarters) if quarters else 99
+
+
+
 def highlight_quarters(val):
     if val == " ":
         return "background-color: #ff9999; color: black;"
     return ""
 
 for year in [1, 2]:
-    year_df = timeline_df[timeline_df["Year"] == year]
+    year_df = timeline_df[timeline_df["Year"] == year].copy()
+    year_df["__sort__"] = year_df.apply(quarter_order, axis=1)
+    year_df = year_df.sort_values("__sort__").drop(columns="__sort__")
+
     if not year_df.empty:
         st.markdown(f"### Year {year}")
         view = year_df[["Course Name", "Q1", "Q2", "Q3", "Q4"]]
