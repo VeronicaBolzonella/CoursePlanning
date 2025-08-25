@@ -17,7 +17,7 @@ REQUIRED_ECS = {
     "Thesis & Research": 45
 }
 
-st.title("EC Summary & Timeline")
+st.title("ECs Summary & Timeline")
 
 if os.path.exists(EXCEL_FILE):
     df = pd.read_excel(EXCEL_FILE, sheet_name=SHEET_NAME, engine="openpyxl")
