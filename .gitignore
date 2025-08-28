@@ -1,6 +1,7 @@
 venv/
 __pycache__/
-courses.xelsx
+courses.xlsx
+api/data/courses.xlsx
 
 # Python
 api/.venv/

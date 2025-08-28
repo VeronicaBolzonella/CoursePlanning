@@ -1,0 +1,11 @@
+{
+  "required_ecs": {
+    "Mandatory (core)": 15,
+    "Mandatory (track)": 18,
+    "Electives (track)": 18,
+    "Electives (core)": 18,
+    "Restricted": 6,
+    "Thesis & Research": 45
+  },
+  "overflow_target": "Electives (core)"
+}
